@@ -1,0 +1,77 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int            @id @default(autoincrement())
+  email          String         @unique
+  password       String
+  role           Role
+  resetToken        String?   // Nullable field for password reset token
+  resetTokenExpiry  DateTime? // Nullable field for password reset token expiry
+  events         Event[]        @relation("OrganizerEvents")
+  registrations  Registration[]
+  feedback       Feedback[]
+  createdCoupons Coupon[]       @relation("UserCoupons")
+}
+
+model Event {
+  id            Int            @id @default(autoincrement())
+  title         String
+  description   String
+  date          DateTime
+  location      String
+  organizerId   Int
+  organizer     User           @relation("OrganizerEvents", fields: [organizerId], references: [id])
+  registrations Registration[]
+  feedback      Feedback[]
+}
+
+model Registration {
+  id        Int      @default(autoincrement())
+  userId    Int
+  eventId   Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  event     Event    @relation(fields: [eventId], references: [id])
+
+  @@id([userId, eventId])
+}
+
+model Feedback {
+  id      Int    @default(autoincrement())
+  userId  Int
+  eventId Int
+  comment String
+  rating  Int
+  user    User   @relation(fields: [userId], references: [id])
+  event   Event  @relation(fields: [eventId], references: [id])
+
+  @@id([userId, eventId])
+}
+
+model Coupon {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  discount    Float
+  validUntil  DateTime
+  createdById Int
+  createdBy   User     @relation("UserCoupons", fields: [createdById], references: [id])
+}
+
+enum Role {
+  ADMIN
+  ORGANIZER
+  ATTENDEE
+}
